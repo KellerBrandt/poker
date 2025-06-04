@@ -4,10 +4,12 @@
 
 class InfoSet {
 public:
+    int numActions;
     std::vector<double> regretSum;
     std::vector<double> strategySum;
 
-    InfoSet(int numActions) : regretSum(numActions, 0.0), strategySum(numActions, 0.0) {}
+	InfoSet();
+    InfoSet(int numActions);
 
     std::vector<double> getStrategy();
 

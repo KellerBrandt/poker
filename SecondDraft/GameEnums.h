@@ -7,11 +7,27 @@ enum Player {
     CHANCE = 2
 };
 
+/*
+//RPS
+enum Action {
+	NULL_ACTION = -1,
+	ROCK = 0,
+	PAPER = 1,
+	SCISSORS = 2,
+	ACTION_COUNT = 3
+};
+
+enum Chance {
+	NULL_CHANCE = -1
+};
+*/
+
+
 //KuhnPoker
 enum Action {
     NULL_ACTION = -1,
     CHECK = 0,
-    BET = 2,
+    BET = 1,
     ACTION_COUNT = 2
 };
 
@@ -23,10 +39,12 @@ enum Card {
 }; 
 
 enum Chance {
+    NULL_CHANCE = -1,
     DEAL_JACK = 0,
     DEAL_QUEEN = 1,
     DEAL_KING = 2
 };
+
 
 /*
 //Leduc

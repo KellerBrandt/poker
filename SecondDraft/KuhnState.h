@@ -6,14 +6,16 @@
 class KuhnState : public GameState {
 public:
     //Game progress and status
+    bool isTerminalNode;
     Player currentPlayer;
+    std::vector<Chance> chances;
 
     //Card information
     std::vector<Card> playerCards;
+    std::vector<Card> deck;
 
     //Betting and pot
-    int pot;
-    std::vector<int> playerAnte;
+    std::vector<double> playerAnte;
     std::vector<Action> actions;
 
     //Player status
@@ -28,17 +30,20 @@ public:
 
     bool isChance() const override;
 
-    double getUtility(Player player) const override;
+    double getUtility() const override;
 
     std::vector<Action> legalActions() const override;
 
     std::unique_ptr<GameState> clone() const override;
 
     void applyAction(Action action) override;
-    void applyChance(Chance chance) override;
 
     // Returns all possible chance actions and their probabilities.
     std::vector<std::pair<Chance, double>> chanceOutcomes() const override;
 
-    Player getKey(Player player) const override;
+    void applyChance(Chance chance) override;
+
+    int getKey() const override;
+
+	void print() const override;
 };

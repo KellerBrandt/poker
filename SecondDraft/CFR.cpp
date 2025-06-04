@@ -3,20 +3,38 @@
 
 void CFR::runVanillaCFR(std::unique_ptr<GameState>& root, int iterations) {
     double sum = 0.0;
+
     for (int i = 0; i < iterations; i++) {
         sum += vanillaCFR(root, 1.0, 1.0, 1.0);
     }
-    std::cout << "Average EV: " << sum / iterations << std::endl;
+	
+	sum /= iterations;
+
+    std::cout << "Average EV: " << sum << std::endl;
+	std::cout << "InfoSet size: " << infosets.size() << std::endl;
+
+	for (auto& infoSet : infosets) {
+		std::cout << infoSet.first << " ";
+		for (auto& action : infoSet.second.getAverageStrategy()) {
+			std::cout << action << " ";
+		}
+		std::cout << std::endl;
+	}
 }
 
 double CFR::vanillaCFR(std::unique_ptr<GameState>& state, double p0, double p1, double pChance) {
+	//std::cout << "Depth: " << depth << std::endl;
+	//state->print();
+
     if (state->isTerminal()) {
-        return state->getUtility(state->getCurrentPlayer());
+        return state->getUtility();
     }
+
+	//std::cout << "Past terminal check" << std::endl;
 
     Player currentPlayer = state->getCurrentPlayer();
 
-    if (currentPlayer == Player::CHANCE) { //might handle probabilities wrong here with duplicate deals to p0 and p1
+    if (state->isChance()) { //might handle probabilities wrong here with duplicate deals to p0 and p1
         std::vector<std::pair<Chance, double>> chanceOutcomes = state->chanceOutcomes();
         double sum = 0.0;
         for (auto& outcome : chanceOutcomes) {
@@ -27,7 +45,7 @@ double CFR::vanillaCFR(std::unique_ptr<GameState>& state, double p0, double p1, 
         return sum;
     }
 
-    int key = state->getKey(state->getCurrentPlayer());
+    int key = state->getKey();
 
     if (infosets.find(key) == infosets.end()) {
         infosets[key] = InfoSet(Action::ACTION_COUNT);

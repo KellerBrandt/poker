@@ -1,0 +1,5 @@
+{
+	"C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: LLVM, UseTab: Always, TabWidth: 4, IndentWidth: 4, AllowShortIfStatementsOnASingleLine: true, ColumnLimit: 0 }",
+	"C_Cpp.clang_format_style": "{ BasedOnStyle: LLVM, UseTab: Always, TabWidth: 4, IndentWidth: 4, AllowShortIfStatementsOnASingleLine: true, ColumnLimit: 0 }",
+	"html.format.wrapAttributesIndentSize": 400
+}

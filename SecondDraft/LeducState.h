@@ -6,25 +6,20 @@
 class LeducState : public GameState {
 public:
     //Game progress and status
-    int round;
+	int round;
+    bool isTerminalNode;
     Player currentPlayer;
+    std::vector<Chance> chances;
 
     //Card information
-    Card publicCard;
     std::vector<Card> playerCards;
-    std::vector<Card> deck; //remaining cards in deck
+    std::vector<Card> deck;
 
     //Betting and pot
-    int pot;
-    int callCount; //number of calls made this round
-    int raiseCount; //number of raises made this round
-    std::vector<int> playerAnte;
-    std::vector<Action> round1Actions;
-    std::vector<Action> round2Actions;
+    std::vector<double> playerAnte;
+    std::vector<Action> actions;
 
     //Player status
-    int winnerCount;
-    int remainingPlayers;
     std::vector<bool> playerFolded;
     std::vector<bool> playerIsWinner;
 
@@ -36,18 +31,21 @@ public:
 
     bool isChance() const override;
 
-    double getUtility(Player player) const override;
+    double getUtility() const override;
 
     std::vector<Action> legalActions() const override;
 
     std::unique_ptr<GameState> clone() const override;
 
     void applyAction(Action action) override;
-    void applyChance(Chance chance) override;
-
+	
     // For chance nodes: returns all possible chance actions and their probabilities.
     // e.g., { (dealCard1, 0.25), (dealCard2, 0.25), ... }
     std::vector<std::pair<Chance, double>> chanceOutcomes() const override;
 
-    Player getKey(Player player) const override;
+    void applyChance(Chance chance) override;
+
+    int getKey() const override;
+
+	void print() const override;
 };
