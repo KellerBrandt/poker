@@ -18,6 +18,8 @@ struct Action {
 
 	Type type;
 
+	Action() : type(Type::Empty) {}
+
 	Action(Type t) : type(t) {}
 
 	std::string toString() const {

@@ -53,8 +53,16 @@ void RPSState::applyAction(Action action) {
     currentPlayer = 1 - currentPlayer;
 }
 
+void RPSState::revertAction(Action action) {
+
+}
+
 void RPSState::applyChance(Chance chance) {
 	return;
+}
+
+void RPSState::revertChance(Chance chance) {
+
 }
 
 std::unordered_map<Chance, double> RPSState::getChance() const {

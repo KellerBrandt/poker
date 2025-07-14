@@ -89,6 +89,28 @@ void KuhnState::applyAction(Action action) {
 	currentPlayer = 1 - currentPlayer;
 }
 
+void KuhnState::revertAction(Action action) {
+	int previousPlayer = 1 - currentPlayer;
+
+	int actionCount = actions.size();
+	Action lastAction = Action(Action::Type::Invalid);
+
+	if (actionCount > 1) {
+		lastAction = actions[actionCount - 2];
+	}
+
+	isTerminalState = false;
+
+	if (action.type == Action::Type::Raise) {
+		--playerAnte[previousPlayer];
+	} else if (action.type == Action::Type::Fold) {
+		playerFolded[previousPlayer] = false;
+	}
+
+	actions.pop_back();
+	currentPlayer = previousPlayer;
+}
+
 void KuhnState::applyChance(Chance chance) {
 	assert(currentPlayer == -1);
 	int card = chance.value;
@@ -115,6 +137,20 @@ void KuhnState::applyChance(Chance chance) {
 	}
 }
 
+void KuhnState::revertChance(Chance chance) {
+	currentPlayer = -1;
+	isChanceState = true;
+
+	playerCards.pop_back();
+	chances.pop_back();
+
+	deck.push_back(chance.value);
+	std::sort(deck.begin(), deck.end());
+
+	playerIsWinner[0] = false;
+	playerIsWinner[1] = false;;
+}
+
 long KuhnState::getKey() const {
 	assert(currentPlayer != -1);
 	long key = 7.0;
@@ -136,17 +172,5 @@ int KuhnState::getActionIndex(Action action) const {
 }
 
 std::unique_ptr<GameState> KuhnState::clone() const {
-	std::unique_ptr<KuhnState> newState = std::make_unique<KuhnState>();
-	newState->currentPlayer = currentPlayer;
-	newState->actionCount = actionCount;
-	newState->playerCards = playerCards;
-	newState->deck = deck;
-	newState->chances = chances;
-	newState->playerIsWinner = playerIsWinner;
-	newState->playerFolded = playerFolded;
-	newState->playerAnte = playerAnte;
-	newState->isTerminalState = isTerminalState;
-	newState->isChanceState = isChanceState;
-	newState->actions = actions;
-	return newState;
+	return std::make_unique<KuhnState>(*this);
 }

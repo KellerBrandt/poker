@@ -3,6 +3,7 @@
 
 struct Chance {
     int value;
+    Chance() : value(-1) {}
     Chance(int v) : value(v) {}
 
     bool operator==(const Chance &other) const {

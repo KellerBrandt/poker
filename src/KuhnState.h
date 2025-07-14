@@ -22,7 +22,9 @@ class KuhnState : public GameState {
 	std::vector<Action> getLegalActions() const override;
 	std::unordered_map<Chance, double> getChance() const override;
 	void applyAction(Action action) override;
+	void revertAction(Action action) override;
 	void applyChance(Chance chance) override;
+	void revertChance(Chance chance) override;
 
 	long getKey() const override;
 	int getActionIndex(Action action) const override;
@@ -36,6 +38,7 @@ class KuhnState : public GameState {
 	std::vector<bool> playerFolded;
 	std::vector<double> playerAnte;
 	std::vector<int> playerCards;
+	std::vector<Action> actions;
 	bool isTerminalState;
 	bool isChanceState;
 };

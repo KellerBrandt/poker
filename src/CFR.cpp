@@ -14,17 +14,8 @@ std::vector<double> CFR::vanillaCFR(std::unique_ptr<GameState> &state, int itera
 	double EV1 = 0;
 
 	for (int i = 0; i < iterations; ++i) {
-		auto state0 = state->clone();
-		auto state1 = state->clone();
-
-		double temp0 = vanillaCFR(state0, 0, 1.0, 1.0);
-		double temp1 = vanillaCFR(state1, 1, 1.0, 1.0);
-
-		// std::cout << "temp0: " << temp0 << std::endl;
-		// std::cout << "temp1: " << temp1 << std::endl;
-
-		EV0 += temp0;
-		EV1 += temp1;
+		EV0 += vanillaCFR(state, 0, 1.0, 1.0);
+		EV1 += vanillaCFR(state, 1, 1.0, 1.0);
 	}
 
 	EV0 /= iterations;
@@ -32,26 +23,6 @@ std::vector<double> CFR::vanillaCFR(std::unique_ptr<GameState> &state, int itera
 
 	return {EV0, EV1};
 }
-
-double CFR::dualCFR(std::unique_ptr<GameState> &state, int iterations) {
-	double EV0 = 0;
-
-	for (int i = 0; i < iterations; ++i) {
-		EV0 += dualCFR(state, 1.0, 1.0);
-	}
-
-	EV0 /= iterations;
-
-	return EV0;
-}
-
-/*
-notes for speed:
-long key = state->getKey()
-actions = state->getLegalActions()
-maybe remove double pc
-make everything references
-*/
 
 double CFR::vanillaCFR(std::unique_ptr<GameState> &state, int traverser, double pi, double po) {
 	if (state->isTerminal()) {
@@ -69,6 +40,7 @@ double CFR::vanillaCFR(std::unique_ptr<GameState> &state, int traverser, double 
 			nextState->applyChance(chance.first);
 			nodeUtility += chance.second * vanillaCFR(nextState, traverser, pi, po * chance.second);
 		}
+
 		return nodeUtility;
 	}
 
@@ -109,15 +81,7 @@ double CFR::vanillaCFR(std::unique_ptr<GameState> &state, int traverser, double 
 			infoSet.strategySum[action] += pi * strategy[action];
 			infoSet.regretSum[action] += po * (actionUtilities[action] - nodeUtility);
 		}
-		// std::cout << "KEY: " << key << "  ";
-		// for (const auto &p : infoSet.regretSum)
-		// 	std::cout << p.first.toString() << ":" << p.second << "  ";
-		// std::cout << std::endl;
 	}
 
 	return nodeUtility;
-}
-
-double CFR::dualCFR(std::unique_ptr<GameState> &state, double pi, double po) {
-	return -1.0;
 }

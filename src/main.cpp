@@ -1,51 +1,51 @@
 #include "CFR.h"
+#include "GameState.h"
 #include "KuhnState.h"
+#include "LeducState.h"
 #include "RPSState.h"
+#include <chrono>
 #include <iostream>
 
+void runVanillaCFR(std::unique_ptr<GameState> &state, CFR &cfr, int runCount, int iterations) {
+	std::cout << "Iterations: " << iterations << std::endl;
+	std::chrono::duration<double> elapsed = std::chrono::duration<double>(0);
+	std::vector<double> results = {0.0, 0.0};
+
+	for (int i = 0; i < runCount; ++i) {
+		auto start = std::chrono::high_resolution_clock::now();
+
+		std::vector<double> temp = cfr.vanillaCFR(state, iterations);
+
+		auto end = std::chrono::high_resolution_clock::now();
+
+		results[0] += temp[0];
+		results[1] += temp[1];
+
+		elapsed += end - start;
+	}
+
+	elapsed /= runCount;
+
+	results[0] /= runCount;
+	results[1] /= runCount;
+
+	std::cout << "0: " << results[0] << " | 1: " << results[1] << std::endl;
+	std::cout << "Total InfoSet size: " << cfr.infoSets.size() << std::endl;
+	std::cout << "CFR execution time: " << elapsed.count() << " seconds" << std::endl;
+}
+
 int main() {
-	std::unique_ptr<GameState> root = std::make_unique<KuhnState>();
+	std::unique_ptr<GameState> root = std::make_unique<LeducState>();
 	CFR cfr;
-	std::vector<double> temp = cfr.vanillaCFR(root, 100000);
-	std::cout << "0: " << temp[0] << " | 1: " << temp[1] << std::endl;
+	
+	runVanillaCFR(root, cfr, 1, 1000);
 
-	std::cout << "\nAverage strategies for all InfoSets:" << std::endl;
-	// Compute max length of 'InfoSet key: <key>,' for alignment
-	int max_key_len = 0;
-	for (const auto &e : cfr.infoSets) {
-		int len = std::string("InfoSet key: ").size() + std::to_string(e.first).size() + 1; // 1 for ','
-		if (len > max_key_len) max_key_len = len;
+	/*
+	for (const auto &infoSet : cfr.infoSets) {
+		auto averageStrategy = infoSet.second.getAverageStrategy();
+		std::cout << infoSet.first << ": " << averageStrategy[Action(Action::Type::Rock)] << " " << averageStrategy[Action(Action::Type::Paper)] << " " << averageStrategy[Action(Action::Type::Scissors)] << std::endl;
 	}
-	const std::string label = " avg strategy: ";
-	const int tuple_start_col = max_key_len + label.size();
-
-	for (const auto &entry : cfr.infoSets) {
-		std::string key_str = "InfoSet key: " + std::to_string(entry.first) + ",";
-		std::cout << key_str;
-		std::cout << std::string(max_key_len - key_str.size(), ' ');
-		std::cout << label;
-
-		int current_col = max_key_len + label.size();
-		if (current_col < tuple_start_col) {
-			std::cout << std::string(tuple_start_col - current_col, ' ');
-		}
-
-		const auto &avg = entry.second.getAverageStrategy();
-		std::vector<std::string> tuple_strs;
-		for (const auto &ap : avg) {
-			tuple_strs.push_back("(" + std::to_string(static_cast<int>(ap.first.type)) + ": " + std::to_string(ap.second) + ")");
-		}
-		int first_tuple_len = tuple_strs.empty() ? 0 : tuple_strs[0].size();
-		int second_tuple_col = tuple_start_col + first_tuple_len + 3; // 3 spaces between
-		for (size_t i = 0; i < tuple_strs.size(); ++i) {
-			if (i > 0) {
-				std::cout << std::string(second_tuple_col - (tuple_start_col + first_tuple_len), ' ');
-			}
-			std::cout << tuple_strs[i];
-		}
-		std::cout << std::endl;
-
-	}
+	*/
 
 	return 0;
 }
