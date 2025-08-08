@@ -1,17 +1,19 @@
 #include "KuhnState.h"
-#include <cassert>
+#include <algorithm>
 
-KuhnState::KuhnState() : GameState(2, -1) {
-	isChanceState = true;
-	isTerminalState = false;
-	playerAnte = {1.0, 1.0};
-	playerIsWinner = {false, false};
-	playerFolded = {false, false};
-	deck = {JACK, QUEEN, KING};
-}
-
-KuhnState::~KuhnState() {
-}
+KuhnState::KuhnState()
+	: GameState(3, -1),
+	  raisesThisRound(0),
+	  toCall(0),
+	  isTerminalState(false),
+	  isChanceState(true),
+	  deckCounts{1, 1, 1},
+	  chances{},
+	  playerCards{},
+	  actions{},
+	  history{},
+	  playerAnte{1.0, 1.0},
+	  playerFolded{false, false} {}
 
 bool KuhnState::isTerminal() const {
 	return isTerminalState;
@@ -22,153 +24,168 @@ bool KuhnState::isChance() const {
 }
 
 double KuhnState::getUtility(int player) const {
-	assert(isTerminalState && (player == 0 || player == 1) && (currentPlayer == 0 || currentPlayer == 1));
-
-	if (playerFolded[player]) {
-		return -playerAnte[player];
-	}
-
-	if (playerFolded[1 - player]) {
-		return playerAnte[1 - player];
-	}
-
-	if (playerIsWinner[player]) {
-		return playerAnte[1 - player];
-	}
-
-	return -playerAnte[player];
+	assert(isTerminalState);
+	if (playerFolded[player]) return -playerAnte[player];
+	if (playerFolded[1 - player]) return playerAnte[1 - player];
+	// showdown (distinct ranks in Kuhn)
+	if (playerCards[0] > playerCards[1])
+		return (player == 0) ? playerAnte[1] : -playerAnte[0];
+	else
+		return (player == 1) ? playerAnte[0] : -playerAnte[1];
 }
 
 std::vector<Action> KuhnState::getLegalActions() const {
-	assert(!isTerminalState && (currentPlayer == 0 || currentPlayer == 1));
-	return {Action(Action::Type::Fold), Action(Action::Type::Raise)};
+	std::vector<Action> legal;
+	legal.emplace_back(Action::Type::Fold); // allowed always for symmetry with LeducState
+	legal.emplace_back(Action::Type::Call); // check/call
+	if (raisesThisRound < 1) legal.emplace_back(Action::Type::Raise);
+	return legal;
 }
 
 std::unordered_map<Chance, double> KuhnState::getChance() const {
-	assert(isChanceState && currentPlayer == -1);
+	assert(isChanceState);
+	int total = deckCounts[0] + deckCounts[1] + deckCounts[2];
 	std::unordered_map<Chance, double> outcomes;
-
-	for (int card : deck) {
-		outcomes[Chance(card)] = 1.0 / static_cast<int>(deck.size());
-	}
-
+	for (int r = 0; r < 3; ++r)
+		if (deckCounts[r] > 0)
+			outcomes[Chance(r)] = double(deckCounts[r]) / double(total);
 	return outcomes;
 }
 
 void KuhnState::applyAction(Action action) {
-	assert(!isTerminalState && actions.size() <= 3 && (currentPlayer == 0 || currentPlayer == 1));
+	assert(!isChanceState && !isTerminalState && currentPlayer >= 0);
 
-	int actionCount = actions.size();
-	Action lastAction = Action(Action::Type::Invalid);
+	ActionRecord rec{};
+	rec.action = action;
+	rec.prevCurrentPlayer = currentPlayer;
+	rec.prevIsTerminal = isTerminalState;
+	rec.prevIsChance = isChanceState;
+	rec.prevRaises = raisesThisRound;
+	rec.prevToCall = toCall;
+	rec.prevFoldP0 = playerFolded[0];
+	rec.prevFoldP1 = playerFolded[1];
+	rec.anteDeltaP0 = 0.0;
+	rec.anteDeltaP1 = 0.0;
 
-	if (actionCount > 0) {
-		lastAction = actions[actionCount - 1];
-	}
-
-	// std::cout << "lastAction: " << getActionIndex(lastAction) << std::endl;
-	// std::cout << "action: " << getActionIndex(action) << std::endl;
+	int bs = betSize();
 
 	if (action.type == Action::Type::Fold) {
-		if (lastAction.type == Action::Type::Raise) { // currentPlayer folds
-			isTerminalState = true;
-			playerFolded[currentPlayer] = true;
-		} else if (lastAction.type == Action::Type::Fold) { // showdown
-			isTerminalState = true;
-		}
-	} else if (action.type == Action::Type::Raise) {
-		++playerAnte[currentPlayer];
-		if (lastAction.type == Action::Type::Raise) { // showdown
-			isTerminalState = true;
-		}
-	} else {
-		std::cout << "Invalid action" << std::endl;
+		playerFolded[currentPlayer] = true;
+		isTerminalState = true;
+		actions.push_back(action);
+		currentPlayer = 1 - currentPlayer;
+		history.push_back(rec);
 		return;
 	}
 
-	actions.push_back(action);
-	currentPlayer = 1 - currentPlayer;
+	if (action.type == Action::Type::Call) {
+		if (toCall > 0) {
+			if (currentPlayer == 0) {
+				playerAnte[0] += toCall;
+				rec.anteDeltaP0 = toCall;
+			} else {
+				playerAnte[1] += toCall;
+				rec.anteDeltaP1 = toCall;
+			}
+			toCall = 0;
+			isTerminalState = true; // calling ends the (only) round
+			currentPlayer = 1 - currentPlayer;
+		} else {
+			// check
+			if (!actions.empty() && actions.back().type == Action::Type::Call) {
+				isTerminalState = true; // two checks -> showdown
+				currentPlayer = 1 - currentPlayer;
+			} else {
+				currentPlayer = 1 - currentPlayer;
+			}
+		}
+		actions.push_back(action);
+		history.push_back(rec);
+		return;
+	}
+
+	if (action.type == Action::Type::Raise) {
+		int add = rec.prevToCall + bs; // complete any call + new bet
+		if (currentPlayer == 0) {
+			playerAnte[0] += add;
+			rec.anteDeltaP0 = add;
+		} else {
+			playerAnte[1] += add;
+			rec.anteDeltaP1 = add;
+		}
+		toCall = bs;
+		raisesThisRound += 1;
+		actions.push_back(action);
+		currentPlayer = 1 - currentPlayer;
+		history.push_back(rec);
+		return;
+	}
 }
 
 void KuhnState::revertAction(Action action) {
-	int previousPlayer = 1 - currentPlayer;
-
-	int actionCount = actions.size();
-	Action lastAction = Action(Action::Type::Invalid);
-
-	if (actionCount > 1) {
-		lastAction = actions[actionCount - 2];
-	}
-
-	isTerminalState = false;
-
-	if (action.type == Action::Type::Raise) {
-		--playerAnte[previousPlayer];
-	} else if (action.type == Action::Type::Fold) {
-		playerFolded[previousPlayer] = false;
-	}
-
+	(void)action;
+	assert(!history.empty());
+	ActionRecord rec = history.back();
+	history.pop_back();
+	assert(!actions.empty());
 	actions.pop_back();
-	currentPlayer = previousPlayer;
+
+	currentPlayer = rec.prevCurrentPlayer;
+	isTerminalState = rec.prevIsTerminal;
+	isChanceState = rec.prevIsChance;
+	raisesThisRound = rec.prevRaises;
+	toCall = rec.prevToCall;
+	playerFolded[0] = rec.prevFoldP0;
+	playerFolded[1] = rec.prevFoldP1;
+	playerAnte[0] -= rec.anteDeltaP0;
+	playerAnte[1] -= rec.anteDeltaP1;
 }
 
 void KuhnState::applyChance(Chance chance) {
-	assert(currentPlayer == -1);
-	int card = chance.value;
-
-	playerCards.push_back(card);
-
+	assert(isChanceState);
+	int r = chance.value;
+	assert(r >= 0 && r <= 2 && deckCounts[r] > 0);
+	deckCounts[r] -= 1;
 	chances.push_back(chance);
 
-	std::vector<int> newDeck;
-
-	for (int i = 0; i < deck.size(); ++i) {
-		if (deck[i] != card) {
-			newDeck.push_back(deck[i]);
-		}
-	}
-
-	deck = newDeck;
-
-	if (chances.size() >= 2) {
-		currentPlayer = 0;
+	playerCards.push_back(r);
+	if (playerCards.size() == 2) {
 		isChanceState = false;
-		playerIsWinner[0] = playerCards[0] > playerCards[1];
-		playerIsWinner[1] = playerCards[0] < playerCards[1];
+		currentPlayer = 0;
+		raisesThisRound = 0;
+		toCall = 0;
 	}
 }
 
 void KuhnState::revertChance(Chance chance) {
-	currentPlayer = -1;
-	isChanceState = true;
-
-	playerCards.pop_back();
+	int r = chance.value;
+	assert(deckCounts[r] >= 0);
+	deckCounts[r] += 1;
+	assert(!chances.empty());
 	chances.pop_back();
+	assert(!playerCards.empty());
+	playerCards.pop_back();
 
-	deck.push_back(chance.value);
-	std::sort(deck.begin(), deck.end());
-
-	playerIsWinner[0] = false;
-	playerIsWinner[1] = false;;
+	isChanceState = true;
+	currentPlayer = -1;
+	raisesThisRound = 0;
+	toCall = 0;
 }
 
 long KuhnState::getKey() const {
-	assert(currentPlayer != -1);
-	long key = 7.0;
-
-	for (Action a : actions) {
+	assert(!isChanceState && currentPlayer != -1 && playerCards.size() == 2);
+	long key = 7;
+	for (const auto &a : actions)
 		key = key * 10 + getActionIndex(a);
-	}
-
-	return key * 10000 + 7000 + currentPlayer * 100 + 70 + playerCards[currentPlayer];
+	key = key * 10 + 7;
+	return key * 100 + currentPlayer * 10 + playerCards[currentPlayer];
 }
 
 int KuhnState::getActionIndex(Action action) const {
-	if (action.type == Action::Type::Fold) {
-		return 0;
-	} else if (action.type == Action::Type::Raise) {
-		return 1;
-	}
-	return -1; // error, bad action
+	if (action.type == Action::Type::Fold) return 0;
+	if (action.type == Action::Type::Call) return 1;
+	if (action.type == Action::Type::Raise) return 2;
+	return -1;
 }
 
 std::unique_ptr<GameState> KuhnState::clone() const {

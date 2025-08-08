@@ -8,8 +8,7 @@
 
 class GameState {
   public:
-	GameState(int actionCount, int currentPlayer) : actionCount(actionCount), currentPlayer(currentPlayer) {}
-	virtual ~GameState() = default;
+	GameState(int actionCount, int currentPlayer) : currentPlayer(currentPlayer), actionCount(actionCount) {}	virtual ~GameState() = default;
 	virtual bool isTerminal() const = 0;
 	virtual bool isChance() const = 0;
 	virtual double getUtility(int player) const = 0;

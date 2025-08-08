@@ -6,6 +6,8 @@
 #include <chrono>
 #include <iostream>
 
+//g++ -std=c++17 -O2 -Wall -Wextra src/*.cpp -o poker
+
 void runVanillaCFR(std::unique_ptr<GameState> &state, CFR &cfr, int runCount, int iterations) {
 	std::cout << "Iterations: " << iterations << std::endl;
 	std::chrono::duration<double> elapsed = std::chrono::duration<double>(0);
@@ -35,10 +37,10 @@ void runVanillaCFR(std::unique_ptr<GameState> &state, CFR &cfr, int runCount, in
 }
 
 int main() {
-	std::unique_ptr<GameState> root = std::make_unique<LeducState>();
+	std::unique_ptr<GameState> root = std::make_unique<KuhnState>();
 	CFR cfr;
 	
-	runVanillaCFR(root, cfr, 1, 1000);
+	runVanillaCFR(root, cfr, 1, 100000);
 
 	/*
 	for (const auto &infoSet : cfr.infoSets) {

@@ -36,9 +36,9 @@ double CFR::vanillaCFR(std::unique_ptr<GameState> &state, int traverser, double 
 		auto chances = state->getChance();
 
 		for (const auto &chance : chances) {
-			auto nextState = state->clone();
-			nextState->applyChance(chance.first);
-			nodeUtility += chance.second * vanillaCFR(nextState, traverser, pi, po * chance.second);
+			state->applyChance(chance.first);
+			nodeUtility += chance.second * vanillaCFR(state, traverser, pi, po * chance.second);
+			state->revertChance(chance.first);
 		}
 
 		return nodeUtility;
@@ -60,16 +60,18 @@ double CFR::vanillaCFR(std::unique_ptr<GameState> &state, int traverser, double 
 
 	if (currentPlayer == traverser) {
 		for (const auto &action : legalActions) {
-			auto nextState = state->clone();
-			nextState->applyAction(action);
-			actionUtilities[action] = vanillaCFR(nextState, traverser, pi * strategy[action], po);
+			state->applyAction(action);
+			actionUtilities[action] = vanillaCFR(state, traverser, pi * strategy[action], po);
+			state->revertAction(action);
+
 			nodeUtility += strategy[action] * actionUtilities[action];
 		}
 	} else if (currentPlayer == (1 - traverser)) {
 		for (const auto &action : legalActions) {
-			auto nextState = state->clone();
-			nextState->applyAction(action);
-			actionUtilities[action] = vanillaCFR(nextState, traverser, pi, po * strategy[action]);
+			state->applyAction(action);
+			actionUtilities[action] = vanillaCFR(state, traverser, pi, po * strategy[action]);
+			state->revertAction(action);
+
 			nodeUtility += strategy[action] * actionUtilities[action];
 		}
 	} else {

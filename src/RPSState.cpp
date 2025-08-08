@@ -1,4 +1,5 @@
 #include "RPSState.h"
+#include <cstddef>
 
 RPSState::RPSState() : GameState(3, 0) {}
 
@@ -54,15 +55,15 @@ void RPSState::applyAction(Action action) {
 }
 
 void RPSState::revertAction(Action action) {
-
+    (void)action;
 }
 
 void RPSState::applyChance(Chance chance) {
-	return;
+	(void)chance;
 }
 
 void RPSState::revertChance(Chance chance) {
-
+	(void)chance;
 }
 
 std::unordered_map<Chance, double> RPSState::getChance() const {
